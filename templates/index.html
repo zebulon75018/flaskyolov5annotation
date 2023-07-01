@@ -18,12 +18,43 @@
             flex: 1;
             border: 1px solid black;
         }
+btn-group button {
+  background-color: #04AA6D; /* Green background */
+  border: 1px solid green; /* Green border */
+  color: white; /* White text */
+  padding: 10px 24px; /* Some padding */
+  cursor: pointer; /* Pointer/hand icon */
+  float: left; /* Float the buttons side by side */
+}
+
+.btn-group button:not(:last-child) {
+  border-right: none; /* Prevent double borders */
+}
+
+/* Clear floats (clearfix hack) */
+.btn-group:after {
+  content: "";
+  clear: both;
+  display: table;
+}
+
+/* Add a background color on hover */
+.btn-group button:hover {
+  background-color: #3e8e41;
+}
     </style>
   <script src="https://cdn.bootcss.com/jquery/1.9.1/jquery.min.js"></script>
     <script src="https://cdn.bootcss.com/fabric.js/2.1.0/fabric.min.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/notify/0.4.2/notify.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/notify/0.4.2/styles/metro/notify-metro.css" integrity="sha512-CJ6VRGlIRSV07FmulP+EcCkzFxoJKQuECGbXNjMMkqu7v3QYj37Cklva0Q0D/23zGwjdvoM4Oy+fIIKhcQPZ9Q==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
+<div class="btn-group">
+        <button onclick="addfunc()">Add</button>
+        <button onclick="removefunc()">Remove</button>
+        <button onclick="savefunc()">Save</button>
+</div>
+
     <div id="container">
         <div id="imageList">
             {% for img in lstimg %}
@@ -32,7 +63,6 @@
             <!-- Add more images here -->
         </div>
         <canvas id="canvas"></canvas>
-        <button onclick="savefunc()">Save</button>
     </div>
 
     <script>
@@ -48,13 +78,70 @@
    var filenamepix ="";
    var imgw = 0;
    var imgh = 0;
+   var label ="";
 
+   /*
+   canvas.on({
+    'object:scaling': function(e) {
+    var obj = e.target;
+    obj.set("width", obj.scaleX*obj.width);
+    obj.set("height", obj.scalelY*obj.height);
+    obj.set("scaleX", 1.0);
+    obj.set("scaleY", 1.0);
+      }
+    });*/
+        // Factorisation a faire avec l'ajout danls la lecture du json
+        function addfunc() {
+                 var rect = new fabric.Rect({
+                    left: 100,
+                    top: 100,
+                    width: 50,
+                    height: 50,
+                    fill: 'transparent',
+                    stroke: 'red',
+                    strokeWidth: 2,
+                    label:  "0" 
+                });
+                rects.push(rect);
+                canvas.add(rect);
+
+                // Display label as text above the rectangle
+                var text = new fabric.Text(label, {
+                    left: 50*canvas.width,
+                    top: 50*canvas.height - 20,
+                    fontSize: 16,
+                    fill: 'red'
+                });
+                canvas.add(text);
+            canvas.renderAll();
+
+        }
+        function removefunc() {
+            obj = canvas.getActiveObject();
+            var indexFound = -1;
+            for (var i=0 ; i< rects.length; i++)
+            {
+                  if (obj == rects[i]) {
+                       indexFound = i ;
+                       break;
+                  }
+            }
+            if ( indexFound !=-1) {
+                      rects.splice(indexFound,1);
+                     }
+                     else {
+                        alert("Not Found ");
+                   }
+            canvas.remove(canvas.getActiveObject());
+            canvas.renderAll();
+
+        }
         function savefunc() {
             console.log(rects);
             console.log("savefunc");
             robj = [] 
             for (var i = 0; i < rects.length; i++) {
-                 robj.push({"left":rects[i].left,"top":rects[i].top,"width": rects[i].width, "height": rects[i].height, "label": rects[i].label });
+                 robj.push({"left":rects[i].left,"top":rects[i].top,"width": rects[i].width*rects[i].scaleX, "height": rects[i].height*rects[i].scaleY, "label": rects[i].label });
 
             }
             $.post("/save/",
@@ -65,7 +152,7 @@
              h: imgh,
             },
              function(data, status){
-               console.log(" savefunc ");
+               $.notify(filenamepix+": Saved ! ");
            });
         }
         function displayImage(imageSrc) {
@@ -86,7 +173,8 @@
          });
         $.get("/data?filename="+imageSrc, function(data, status){
               data.forEach(function(item) {
-                var label = item.label;
+                //var label = item.label;
+                label = item.label;
                 var bbox = item.bbox;
 
                 var rect = new fabric.Rect({
